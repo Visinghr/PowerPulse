@@ -1,0 +1,164 @@
+<Window x:Class="PowerPulse.UI.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:PowerPulse.UI.ViewModels"
+        Title="PowerPulse — Battery Monitor"
+        Height="580" Width="440"
+        MinHeight="500" MinWidth="380"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResizeWithGrip"
+        Background="{StaticResource PrimaryBackgroundBrush}"
+        FontFamily="Segoe UI"
+        Closing="Window_Closing"
+        Loaded="Window_Loaded">
+
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>    <!-- Header -->
+            <RowDefinition Height="Auto"/>    <!-- Battery Gauge -->
+            <RowDefinition Height="Auto"/>    <!-- Time Remaining -->
+            <RowDefinition Height="*"/>       <!-- Metric Cards -->
+            <RowDefinition Height="Auto"/>    <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="⚡" FontSize="22" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock Text="PowerPulse" FontSize="22" FontWeight="Bold"
+                       Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+            <TextBlock Text=" — Battery Monitor" FontSize="14"
+                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Bottom" Margin="4,0,0,2"/>
+        </StackPanel>
+
+        <!-- Battery Gauge Area -->
+        <Border Grid.Row="1" Style="{StaticResource MetricCardBorder}" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Circular Battery Gauge -->
+                <Grid Grid.Column="0" Width="120" Height="120" Margin="0,0,16,0">
+                    <!-- Background circle -->
+                    <Ellipse Stroke="{StaticResource BorderBrush}" StrokeThickness="8"
+                             Fill="Transparent"/>
+                    <!-- Progress arc (simplified as colored ellipse overlay) -->
+                    <Ellipse x:Name="BatteryArc" StrokeThickness="8" Fill="Transparent"
+                             Stroke="{StaticResource AccentBlueBrush}"
+                             StrokeDashArray="3.14 100"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform Angle="-90"/>
+                        </Ellipse.RenderTransform>
+                    </Ellipse>
+                    <!-- Center text -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding StatusIcon}" FontSize="18"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding BatteryPercentText}" FontSize="26" FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Status Info -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusText}" FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{Binding PowerRateLabel}" Style="{StaticResource MetricLabelText}"
+                               Margin="0,8,0,0"/>
+                    <TextBlock Text="{Binding PowerRateText}" FontSize="20" FontWeight="Bold"
+                               Foreground="{StaticResource AccentBlueBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Time Remaining -->
+        <Border Grid.Row="2" Style="{StaticResource MetricCardBorder}" Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock Text="Estimated Time Remaining" Style="{StaticResource MetricLabelText}"/>
+                <TextBlock Text="{Binding TimeRemainingText}" FontSize="28" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Metric Cards Grid -->
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Battery Health -->
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Battery Health" Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding HealthPercentText}" Style="{StaticResource MetricValueText}">
+                            <TextBlock.Foreground>
+                                <SolidColorBrush Color="{Binding HealthColor}"/>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Voltage -->
+                <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Voltage" Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding VoltageText}" Style="{StaticResource MetricValueText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Design Capacity -->
+                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Design Capacity" Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding DesignCapacityText}" Style="{StaticResource MetricValueText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Full Charge Capacity -->
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Full Charge Cap." Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding FullChargeCapacityText}" Style="{StaticResource MetricValueText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Remaining Capacity -->
+                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Remaining" Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding RemainingCapacityText}" Style="{StaticResource MetricValueText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Active APIs -->
+                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Data Source" Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding ActiveApisText}" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <TextBlock Grid.Row="4" Text="PowerPulse v1.0 — Polling every 3s"
+                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="10"
+                   HorizontalAlignment="Center"/>
+    </Grid>
+</Window>

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PowerPulse.Core/PowerPulse.Core.csproj" />
+  <Project Path="PowerPulse.UI/PowerPulse.UI.csproj" />
+</Solution>
