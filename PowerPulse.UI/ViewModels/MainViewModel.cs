@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +15,7 @@ namespace PowerPulse.UI.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly BatteryMonitoringService _monitoringService;
+    private readonly Dispatcher _dispatcher;
 
     [ObservableProperty] private int _batteryPercent;
     [ObservableProperty] private string _batteryPercentText = "—%";
@@ -41,31 +43,68 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel()
     {
         _monitoringService = new BatteryMonitoringService();
+        _dispatcher = Dispatcher.CurrentDispatcher;
     }
 
     /// <summary>
     /// Initializes monitoring. Call from UI thread after window loads.
+    /// Runs detection on a background thread to avoid blocking the UI.
     /// </summary>
     public void Initialize()
     {
-        _monitoringService.DetectCapabilities();
-        ActiveApisText = _monitoringService.ActiveApis;
+        StatusText = "Detecting battery APIs...";
 
-        if (!_monitoringService.IsBatteryAvailable)
+        Task.Run(() =>
         {
-            IsBatteryPresent = false;
-            StatusText = "No battery detected";
-            StatusIcon = "🔌";
-            return;
-        }
+            try
+            {
+                Debug.WriteLine("[PowerPulse] Detecting capabilities...");
+                _monitoringService.DetectCapabilities();
+                Debug.WriteLine($"[PowerPulse] APIs available: {_monitoringService.ActiveApis}");
 
-        _monitoringService.StartMonitoring(OnBatteryUpdate, intervalMs: 3000);
+                _dispatcher.BeginInvoke(() =>
+                {
+                    ActiveApisText = _monitoringService.ActiveApis;
+
+                    if (!_monitoringService.IsBatteryAvailable)
+                    {
+                        IsBatteryPresent = false;
+                        StatusText = "No battery detected";
+                        StatusIcon = "🔌";
+                        return;
+                    }
+
+                    Debug.WriteLine("[PowerPulse] Starting monitoring...");
+                    _monitoringService.StartMonitoring(OnBatteryUpdate, intervalMs: 3000);
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PowerPulse] Init error: {ex}");
+                _dispatcher.BeginInvoke(() =>
+                {
+                    StatusText = $"Error: {ex.Message}";
+                    ActiveApisText = "Detection failed";
+                });
+            }
+        });
     }
 
     private void OnBatteryUpdate(BatteryInfo info)
     {
-        // Marshal to UI thread
-        Application.Current?.Dispatcher?.BeginInvoke(() => UpdateFromInfo(info));
+        // Marshal to UI thread using captured dispatcher
+        _dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                UpdateFromInfo(info);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[PowerPulse] Update error: {ex}");
+                StatusText = $"Update error: {ex.Message}";
+            }
+        });
     }
 
     private void UpdateFromInfo(BatteryInfo info)

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using PowerPulse.Core.Models;
 using PowerPulse.Core.Utilities;
 
@@ -65,9 +66,9 @@ public class BatteryMonitoringService : IDisposable
                 var info = GetMergedBatteryInfo();
                 _onUpdate?.Invoke(info);
             }
-            catch
+            catch (Exception ex)
             {
-                // Don't crash on polling errors
+                Debug.WriteLine($"[PowerPulse] Polling error: {ex}");
             }
         }, null, 0, intervalMs);
     }
