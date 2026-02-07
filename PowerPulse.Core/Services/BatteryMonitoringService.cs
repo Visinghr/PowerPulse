@@ -80,10 +80,10 @@ public class BatteryMonitoringService : IDisposable
     public string ActiveApis =>
         (_useWindowsApi, _useWmiApi, _useSimulation) switch
         {
-            (_, _, true) => "Simulated Battery",
             (true, true, _) => "Windows.Devices.Power + WMI",
             (true, false, _) => "Windows.Devices.Power",
             (false, true, _) => "WMI BatteryStatus",
+            (false, false, true) => "Simulated Battery",
             _ => "None"
         };
 
@@ -115,12 +115,8 @@ public class BatteryMonitoringService : IDisposable
     {
         BatteryInfo info;
 
-        // Simulated mode — no real battery on this machine
-        if (_useSimulation && _simulatedService != null)
-        {
-            info = _simulatedService.GetBatteryInfo();
-        }
-        else if (_useWindowsApi)
+        // Real APIs always take priority over simulation
+        if (_useWindowsApi)
         {
             info = _windowsService.GetBatteryInfo();
 
@@ -148,9 +144,14 @@ public class BatteryMonitoringService : IDisposable
         {
             info = _wmiService.GetBatteryInfo();
         }
+        else if (_useSimulation && _simulatedService != null)
+        {
+            // Simulated mode — ONLY when no real battery APIs are available
+            info = _simulatedService.GetBatteryInfo();
+        }
         else
         {
-            // No battery APIs available
+            // No battery APIs available at all
             info = new BatteryInfo
             {
                 IsBatteryPresent = false,
