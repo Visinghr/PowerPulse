@@ -14,13 +14,18 @@ public class BatteryMonitoringService : IDisposable
     private readonly WindowsBatteryService _windowsService;
     private readonly WmiBatteryService _wmiService;
     private readonly BatteryCalculations _estimator;
+    private SimulatedBatteryService? _simulatedService;
 
     private System.Threading.Timer? _pollingTimer;
     private Action<BatteryInfo>? _onUpdate;
     private bool _useWindowsApi;
     private bool _useWmiApi;
+    private bool _useSimulation;
 
     private const int DefaultIntervalMs = 3000; // 3 seconds per spec
+
+    /// <summary>Whether simulated battery mode is active (no real battery found).</summary>
+    public bool IsSimulated => _useSimulation;
 
     public BatteryMonitoringService()
     {
@@ -35,20 +40,50 @@ public class BatteryMonitoringService : IDisposable
     /// </summary>
     public void DetectCapabilities()
     {
-        _useWindowsApi = _windowsService.IsSupported();
-        _useWmiApi = _wmiService.IsSupported();
+        Log("Checking Windows.Devices.Power API...");
+        try
+        {
+            _useWindowsApi = _windowsService.IsSupported();
+            Log($"  Windows API supported: {_useWindowsApi}");
+        }
+        catch (Exception ex)
+        {
+            Log($"  Windows API check FAILED: {ex.Message}");
+            _useWindowsApi = false;
+        }
+
+        Log("Checking WMI BatteryStatus API...");
+        try
+        {
+            _useWmiApi = _wmiService.IsSupported();
+            Log($"  WMI API supported: {_useWmiApi}");
+        }
+        catch (Exception ex)
+        {
+            Log($"  WMI API check FAILED: {ex.Message}");
+            _useWmiApi = false;
+        }
+
+        // If no real battery found, enable simulated battery for development/demo
+        if (!_useWindowsApi && !_useWmiApi)
+        {
+            Log("No real battery found — activating simulated battery mode.");
+            _simulatedService = new SimulatedBatteryService();
+            _useSimulation = true;
+        }
     }
 
     /// <summary>Whether any battery API is available.</summary>
-    public bool IsBatteryAvailable => _useWindowsApi || _useWmiApi;
+    public bool IsBatteryAvailable => _useWindowsApi || _useWmiApi || _useSimulation;
 
     /// <summary>Which APIs are active.</summary>
     public string ActiveApis =>
-        (_useWindowsApi, _useWmiApi) switch
+        (_useWindowsApi, _useWmiApi, _useSimulation) switch
         {
-            (true, true) => "Windows.Devices.Power + WMI",
-            (true, false) => "Windows.Devices.Power",
-            (false, true) => "WMI BatteryStatus",
+            (_, _, true) => "Simulated Battery",
+            (true, true, _) => "Windows.Devices.Power + WMI",
+            (true, false, _) => "Windows.Devices.Power",
+            (false, true, _) => "WMI BatteryStatus",
             _ => "None"
         };
 
@@ -68,7 +103,7 @@ public class BatteryMonitoringService : IDisposable
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[PowerPulse] Polling error: {ex}");
+                Log($"Polling error: {ex}");
             }
         }, null, 0, intervalMs);
     }
@@ -80,7 +115,12 @@ public class BatteryMonitoringService : IDisposable
     {
         BatteryInfo info;
 
-        if (_useWindowsApi)
+        // Simulated mode — no real battery on this machine
+        if (_useSimulation && _simulatedService != null)
+        {
+            info = _simulatedService.GetBatteryInfo();
+        }
+        else if (_useWindowsApi)
         {
             info = _windowsService.GetBatteryInfo();
 
@@ -148,6 +188,21 @@ public class BatteryMonitoringService : IDisposable
         StopMonitoring();
         _windowsService.Dispose();
         _wmiService.Dispose();
+        _simulatedService?.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    private static void Log(string message)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "PowerPulse");
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            var logFile = Path.Combine(dir, "debug.log");
+            File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}");
+        }
+        catch { }
     }
 }

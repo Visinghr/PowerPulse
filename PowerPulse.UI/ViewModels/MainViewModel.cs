@@ -58,9 +58,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             try
             {
-                Debug.WriteLine("[PowerPulse] Detecting capabilities...");
+                Log("Detecting capabilities...");
                 _monitoringService.DetectCapabilities();
-                Debug.WriteLine($"[PowerPulse] APIs available: {_monitoringService.ActiveApis}");
+                Log($"APIs available: {_monitoringService.ActiveApis}");
 
                 _dispatcher.BeginInvoke(() =>
                 {
@@ -68,19 +68,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
                     if (!_monitoringService.IsBatteryAvailable)
                     {
+                        Log("No battery detected on this system.");
                         IsBatteryPresent = false;
                         StatusText = "No battery detected";
                         StatusIcon = "🔌";
                         return;
                     }
 
-                    Debug.WriteLine("[PowerPulse] Starting monitoring...");
+                    if (_monitoringService.IsSimulated)
+                    {
+                        Log("Simulated battery mode active.");
+                        ActiveApisText = "⚠ Simulated Battery";
+                    }
+
+                    Log("Starting monitoring (3s interval)...");
                     _monitoringService.StartMonitoring(OnBatteryUpdate, intervalMs: 3000);
                 });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[PowerPulse] Init error: {ex}");
+                Log($"Init FAILED: {ex}");
                 _dispatcher.BeginInvoke(() =>
                 {
                     StatusText = $"Error: {ex.Message}";
@@ -101,7 +108,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[PowerPulse] Update error: {ex}");
+                Log($"Update error: {ex}");
                 StatusText = $"Update error: {ex.Message}";
             }
         });
@@ -109,6 +116,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void UpdateFromInfo(BatteryInfo info)
     {
+        _logUpdateCount++;
+        // Log every 10th update (every ~30 seconds) to avoid spam
+        if (_logUpdateCount <= 3 || _logUpdateCount % 10 == 0)
+        {
+            Log($"Update #{_logUpdateCount}: {info.Percentage}% | Status={info.Status} | " +
+                $"DischargeRate={info.DischargeRateMW}mW | ChargeRate={info.ChargeRateMW}mW | " +
+                $"Remaining={info.RemainingCapacityMWh}mWh | FullCharge={info.FullChargeCapacityMWh}mWh | " +
+                $"Design={info.DesignCapacityMWh}mWh | Voltage={info.VoltageMV}mV | " +
+                $"Health={info.HealthPercent:F1}% | ETA={info.EstimatedTimeRemaining}");
+        }
+
         LatestInfo = info;
 
         if (!info.IsBatteryPresent)
@@ -207,5 +225,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _monitoringService.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    private static int _logUpdateCount;
+    private static readonly string LogFile = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "PowerPulse", "debug.log");
+
+    internal static void Log(string message)
+    {
+        try
+        {
+            var dir = System.IO.Path.GetDirectoryName(LogFile)!;
+            if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
+            var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}";
+            System.IO.File.AppendAllText(LogFile, line);
+        }
+        catch { /* logging should never crash the app */ }
     }
 }
