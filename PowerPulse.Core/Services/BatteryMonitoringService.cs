@@ -14,6 +14,8 @@ public class BatteryMonitoringService : IDisposable
     private readonly WindowsBatteryService _windowsService;
     private readonly WmiBatteryService _wmiService;
     private readonly BatteryCalculations _estimator;
+    private readonly PowerHistoryService _historyService;
+    private readonly BatteryNotificationService _notificationService;
     private SimulatedBatteryService? _simulatedService;
 
     private System.Threading.Timer? _pollingTimer;
@@ -27,11 +29,19 @@ public class BatteryMonitoringService : IDisposable
     /// <summary>Whether simulated battery mode is active (no real battery found).</summary>
     public bool IsSimulated => _useSimulation;
 
+    /// <summary>Gets the power history service for accessing historical data.</summary>
+    public PowerHistoryService History => _historyService;
+
+    /// <summary>Gets the notification service for battery alerts.</summary>
+    public BatteryNotificationService Notifications => _notificationService;
+
     public BatteryMonitoringService()
     {
         _windowsService = new WindowsBatteryService();
         _wmiService = new WmiBatteryService();
         _estimator = new BatteryCalculations();
+        _historyService = new PowerHistoryService();
+        _notificationService = new BatteryNotificationService();
     }
 
     /// <summary>
@@ -172,6 +182,15 @@ public class BatteryMonitoringService : IDisposable
             _estimator.Reset();
             info.EstimatedTimeRemaining = null;
         }
+
+        // Add to history for graphing and trend analysis
+        if (info.IsBatteryPresent)
+        {
+            _historyService.AddSample(info);
+        }
+
+        // Check for notification conditions
+        _notificationService.CheckAndNotify(info);
 
         return info;
     }

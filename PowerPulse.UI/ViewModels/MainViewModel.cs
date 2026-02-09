@@ -36,6 +36,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _powerRateLabel = "Discharge Rate";
     [ObservableProperty] private string _powerRateText = "— W";
     [ObservableProperty] private string _statusIcon = "🔋";
+    [ObservableProperty] private string _averagePowerText = "— W";
+    [ObservableProperty] private string _peakPowerText = "— W";
 
     /// <summary>Current raw battery info for tray icon tooltip.</summary>
     public BatteryInfo? LatestInfo { get; private set; }
@@ -44,6 +46,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _monitoringService = new BatteryMonitoringService();
         _dispatcher = Dispatcher.CurrentDispatcher;
+
+        // Subscribe to notification events
+        _monitoringService.Notifications.NotificationRequested += OnNotificationRequested;
     }
 
     /// <summary>
@@ -219,10 +224,71 @@ public partial class MainViewModel : ObservableObject, IDisposable
         VoltageText = info.VoltageMV.HasValue && info.VoltageMV > 0
             ? $"{UnitConverter.MillivoltsToVolts(info.VoltageMV.Value)} V"
             : "N/A";
+
+        // Update historical metrics (average and peak power consumption)
+        UpdateHistoricalMetrics();
     }
+
+    private void UpdateHistoricalMetrics()
+    {
+        try
+        {
+            // Calculate average and peak over last hour
+            var avgRate = _monitoringService.History.GetAverageDischargeRate(TimeSpan.FromHours(1));
+            var peakRate = _monitoringService.History.GetPeakDischargeRate(TimeSpan.FromHours(1));
+
+            AveragePowerText = avgRate > 0
+                ? UnitConverter.FormatWatts(UnitConverter.MilliwattsToWatts((int)avgRate))
+                : "N/A";
+
+            PeakPowerText = peakRate > 0
+                ? UnitConverter.FormatWatts(UnitConverter.MilliwattsToWatts(peakRate))
+                : "N/A";
+        }
+        catch
+        {
+            // If history service fails, just show N/A
+            AveragePowerText = "N/A";
+            PeakPowerText = "N/A";
+        }
+    }
+
+    private void OnNotificationRequested(object? sender, BatteryNotificationEventArgs e)
+    {
+        // Marshal to UI thread
+        _dispatcher.BeginInvoke(() =>
+        {
+            // Convert notification priority to balloon icon
+            var icon = e.Priority switch
+            {
+                NotificationPriority.High => System.Windows.Forms.ToolTipIcon.Warning,
+                NotificationPriority.Medium => System.Windows.Forms.ToolTipIcon.Warning,
+                _ => System.Windows.Forms.ToolTipIcon.Info
+            };
+
+            // Show notification via app's tray service
+            ShowNotification(e.Title, e.Message, icon);
+        });
+    }
+
+    /// <summary>
+    /// Shows a system notification. Should be called from UI thread.
+    /// </summary>
+    private void ShowNotification(string title, string message, System.Windows.Forms.ToolTipIcon icon)
+    {
+        // Notification will be handled by TrayIconService through App.xaml.cs
+        // Raise an event that App can subscribe to
+        NotificationRequested?.Invoke(this, (title, message, icon));
+    }
+
+    /// <summary>
+    /// Event raised when a notification should be shown to the user.
+    /// </summary>
+    public event EventHandler<(string Title, string Message, System.Windows.Forms.ToolTipIcon Icon)>? NotificationRequested;
 
     public void Dispose()
     {
+        _monitoringService.Notifications.NotificationRequested -= OnNotificationRequested;
         _monitoringService.Dispose();
         GC.SuppressFinalize(this);
     }
