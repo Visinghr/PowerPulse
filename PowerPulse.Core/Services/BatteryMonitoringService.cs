@@ -166,11 +166,19 @@ public class BatteryMonitoringService : IDisposable
             info.EstimatedTimeRemaining = _estimator.UpdateAndEstimate(
                 info.DischargeRateMW,
                 info.RemainingCapacityMWh);
+            
+            // Calculate real-time estimate based on last minute average
+            info.RealTimeEstimate = _estimator.GetRealTimeEstimate(info.RemainingCapacityMWh);
+            
+            // Calculate experimental pattern-based estimate
+            info.PatternBasedEstimate = _estimator.GetPatternBasedEstimate(info.RemainingCapacityMWh);
         }
         else
         {
             _estimator.Reset();
             info.EstimatedTimeRemaining = null;
+            info.RealTimeEstimate = null;
+            info.PatternBasedEstimate = null;
         }
 
         return info;

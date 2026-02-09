@@ -35,8 +35,14 @@ public class BatteryInfo
             ? Math.Round((double)FullChargeCapacityMWh / DesignCapacityMWh * 100, 1)
             : 0;
 
-    /// <summary>Estimated time remaining on battery, calculated via EMA-smoothed rate.</summary>
+    /// <summary>Estimated time remaining on battery, calculated via EMA-smoothed rate (historical data).</summary>
     public TimeSpan? EstimatedTimeRemaining { get; set; }
+
+    /// <summary>Real-time estimated time remaining based on last minute average (when UI is open).</summary>
+    public TimeSpan? RealTimeEstimate { get; set; }
+
+    /// <summary>Experimental: Pattern-based time estimate based on historical usage at this time of day.</summary>
+    public TimeSpan? PatternBasedEstimate { get; set; }
 
     /// <summary>Timestamp when this reading was taken.</summary>
     public DateTime Timestamp { get; set; } = DateTime.Now;

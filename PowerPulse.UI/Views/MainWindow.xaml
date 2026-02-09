@@ -83,12 +83,33 @@
             </Grid>
         </Border>
 
-        <!-- Time Remaining -->
+        <!-- Time Remaining (Multiple Estimates) -->
         <Border Grid.Row="2" Style="{StaticResource MetricCardBorder}" Margin="0,0,0,8">
             <StackPanel>
-                <TextBlock Text="Estimated Time Remaining" Style="{StaticResource MetricLabelText}"/>
-                <TextBlock Text="{Binding TimeRemainingText}" FontSize="28" FontWeight="Bold"
-                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,0"/>
+                <TextBlock Text="Time Remaining (Adaptive EMA)" Style="{StaticResource MetricLabelText}"/>
+                <TextBlock Text="{Binding TimeRemainingText}" FontSize="24" FontWeight="Bold"
+                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,8"/>
+                
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Real-time Estimate -->
+                    <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                        <TextBlock Text="Real-Time (Last Min)" Style="{StaticResource MetricLabelText}" FontSize="10"/>
+                        <TextBlock Text="{Binding RealTimeEstimateText}" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource AccentBlueBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Pattern-based Estimate -->
+                    <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                        <TextBlock Text="Pattern-Based (Exp.)" Style="{StaticResource MetricLabelText}" FontSize="10"/>
+                        <TextBlock Text="{Binding PatternEstimateText}" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Grid>
             </StackPanel>
         </Border>
 

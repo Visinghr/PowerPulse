@@ -21,6 +21,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _batteryPercentText = "—%";
     [ObservableProperty] private string _statusText = "Detecting...";
     [ObservableProperty] private string _timeRemainingText = "Calculating...";
+    [ObservableProperty] private string _realTimeEstimateText = "Calculating...";
+    [ObservableProperty] private string _patternEstimateText = "Learning...";
     [ObservableProperty] private string _dischargeRateText = "— W";
     [ObservableProperty] private string _chargeRateText = "— W";
     [ObservableProperty] private string _healthPercentText = "—%";
@@ -191,6 +193,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Time remaining
         TimeRemainingText = IsDischarging
             ? UnitConverter.FormatTimeRemaining(info.EstimatedTimeRemaining)
+            : IsCharging ? "Charging..." : "Plugged In";
+
+        // Real-time estimate (based on last minute)
+        RealTimeEstimateText = IsDischarging
+            ? UnitConverter.FormatTimeRemaining(info.RealTimeEstimate)
+            : IsCharging ? "Charging..." : "Plugged In";
+
+        // Pattern-based estimate (experimental)
+        PatternEstimateText = IsDischarging
+            ? (info.PatternBasedEstimate.HasValue 
+                ? UnitConverter.FormatTimeRemaining(info.PatternBasedEstimate) 
+                : "Learning...")
             : IsCharging ? "Charging..." : "Plugged In";
 
         // Health
