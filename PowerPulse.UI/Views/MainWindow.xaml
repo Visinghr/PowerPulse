@@ -103,6 +103,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Battery Health -->
@@ -146,8 +147,24 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Active APIs -->
+                <!-- Average Power (1h) -->
                 <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Avg Power (1h)" Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding AveragePowerText}" Style="{StaticResource MetricValueText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Peak Power (1h) -->
+                <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource MetricCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Peak Power (1h)" Style="{StaticResource MetricLabelText}"/>
+                        <TextBlock Text="{Binding PeakPowerText}" Style="{StaticResource MetricValueText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Active APIs -->
+                <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource MetricCardBorder}">
                     <StackPanel>
                         <TextBlock Text="Data Source" Style="{StaticResource MetricLabelText}"/>
                         <TextBlock Text="{Binding ActiveApisText}" FontSize="12" FontWeight="SemiBold"

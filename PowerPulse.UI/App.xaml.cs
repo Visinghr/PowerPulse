@@ -40,6 +40,12 @@ public partial class App : Application
             }
         };
 
+        // Handle notification requests from ViewModel
+        vm.NotificationRequested += (_, notification) =>
+        {
+            _trayService?.ShowNotification(notification.Title, notification.Message, notification.Icon);
+        };
+
         mainWindow.Show();
     }
 
